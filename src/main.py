@@ -9,10 +9,9 @@
 #                                                                               #                                                                          
 #    Configuration:  V5 Clawbot (Individual Motors)                             #
 #                    Controller                                                 #
-#                    Claw Motor in Port 3                                       #
-#                    Arm Motor in Port 8                                        #
-#                    Left Motor in Port 1                                       #
-#                    Right Motor in Port 10                                     #
+#                    Grabber in Port A                                          #
+#                    Left Motor in Ports 1 and 10                               #
+#                    Right Motor in Ports 11 and 20                             #
 #                                                                               #                                                                          
 # ----------------------------------------------------------------------------- #
 
@@ -22,7 +21,7 @@ from vex import *
 THRESHOLD = 3
 
 # Brain should be defined by default
-brain=Brain()
+brain = Brain()
 
 # Robot configuration code
 controller_1 = Controller(PRIMARY)
@@ -34,8 +33,10 @@ drive_left = MotorGroup(left_motor_a, left_motor_b)
 right_motor_a = Motor(Ports.PORT11, GearSetting.RATIO_18_1, False)
 right_motor_b = Motor(Ports.PORT20, GearSetting.RATIO_18_1, False)
 drive_right = MotorGroup(right_motor_a, right_motor_b)
-
 drivetrain = DriveTrain(drive_left, drive_right, 339.1, 350, 230, MM)
+
+
+intake = Motor(Ports.PORT2)
 
 grabber = DigitalOut(brain.three_wire_port.a)
 isGrabbing = False
@@ -46,11 +47,11 @@ wait(30, MSEC)
 # define variables used for controlling motors based on controller inputs
 left_to_be_stopped = False
 right_to_be_stopped = False
-
+intake_is_stopped = True
 
 
 def remote_control():
-    global left_to_be_stopped, right_to_be_stopped
+    global left_to_be_stopped, right_to_be_stopped, intake_is_stopped
     while True:
 
         drivetrain_left_speed = controller_1.axis4.position() * 0.75 - controller_1.axis2.position()
@@ -90,36 +91,22 @@ def remote_control():
             drive_right.set_velocity(drivetrain_right_speed, PERCENT)
             drive_right.spin(FORWARD)
 
+        if controller_1.buttonR1.pressing():
+            intake.spin(FORWARD)
+            intake_is_stopped = False
+        elif controller_1.buttonR2.pressing():
+            intake.spin(REVERSE)
+            intake_is_stopped = False
+        elif not intake_is_stopped:
+            intake.stop()
+            # set the toggle so that we don't constantly tell the motor to stop when
+            # the buttons are released
+            intake_is_stopped = True
+
         wait(20, MSEC)
 
 rc_auto_loop = Thread(remote_control)
 
-
-# Begin project code
-# Create callback functions for each controller button event
-# def controller_L1_Pressed():
-#     arm_motor.spin(FORWARD)
-#     while controller_1.buttonL1.pressing():
-#         wait(5, MSEC)
-#     arm_motor.stop()
-
-# def controller_L2_Pressed():
-#     arm_motor.spin(REVERSE)
-#     while controller_1.buttonL2.pressing():
-#         wait(5, MSEC)
-#     arm_motor.stop()
-
-# def controller_R1_Pressed():
-#     claw_motor.spin(REVERSE)
-#     while controller_1.buttonR1.pressing():
-#         wait(5, MSEC)
-#     claw_motor.stop()
-
-# def controller_R2_Pressed():
-#     claw_motor.spin(FORWARD)
-#     while controller_1.buttonR2.pressing():
-#         wait(5, MSEC)
-#     claw_motor.stop()
 
 # def startup_brain():
 #     skills = [20 + 130 + 170 + 20, 170, 100, 50]
@@ -146,15 +133,8 @@ rc_auto_loop = Thread(remote_control)
 #         wait(5, MSEC)
 
 
-# def extendGrabber():
-#     global isGrabbing
-#     isGrabbing = not isGrabbing
-#     print(isGrabbing)
-#     grabber.set(isGrabbing)
-
 def pneumatic_on():
     grabber.set(True)
-
 
 def pneumatic_off():
     grabber.set(False)
@@ -165,25 +145,3 @@ controller_1.buttonDown.pressed(pneumatic_off)
 
 pneumatic_off()
 # startup_brain()
-
-# Create Controller callback events - 15 msec delay to ensure events get registered
-# controller_1.buttonL1.pressed(controller_L1_Pressed)
-# controller_1.buttonL2.pressed(controller_L2_Pressed)
-# controller_1.buttonR1.pressed(controller_R1_Pressed)
-# controller_1.buttonR2.pressed(controller_R2_Pressed)
-# controller_1.buttonA.pressed(extendGrabber)
-# wait(15, MSEC)
-
-# Configure Arm and Claw motor hold settings and velocity
-# arm_motor.set_stopping(HOLD)
-# claw_motor.set_stopping(HOLD)
-# arm_motor.set_velocity(60, PERCENT)
-# claw_motor.set_velocity(30, PERCENT)
-
-# # Main Controller loop to set motors to controller axis postiions
-# while True:
-#     left_motor.set_velocity(controller_1.axis3.position(), PERCENT)
-#     right_motor.set_velocity(controller_1.axis2.position(), PERCENT)
-#     left_motor.spin(FORWARD)
-#     right_motor.spin(FORWARD)
-#     wait(5, MSEC)
